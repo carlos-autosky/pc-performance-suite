@@ -4,6 +4,7 @@ Usado por el lanzador para los KPIs del header.
 """
 
 import platform
+import subprocess
 import time
 import psutil
 
@@ -29,6 +30,63 @@ def fmt_bytes(n):
             return f"{n:.1f} {unit}"
         n /= 1024
     return f"{n:.1f} PB"
+
+
+def hardware_summary():
+    """Datos estaticos del equipo (se llama una sola vez al iniciar)."""
+    info = {}
+
+    # Nombre del equipo
+    info["hostname"] = platform.node()
+
+    # Sistema operativo
+    info["os"] = os_label()
+
+    # Procesador
+    cpu_name = platform.processor()
+    try:
+        out = subprocess.check_output(
+            ["wmic", "cpu", "get", "Name"],
+            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+            text=True, timeout=5,
+        )
+        lines = [l.strip() for l in out.strip().splitlines() if l.strip()]
+        if len(lines) >= 2:
+            cpu_name = lines[1]
+    except Exception:
+        pass
+    cores = psutil.cpu_count(logical=False) or "?"
+    threads = psutil.cpu_count(logical=True) or "?"
+    info["cpu"] = f"{cpu_name}  ({cores}C / {threads}T)"
+
+    # RAM total
+    info["ram"] = fmt_bytes(psutil.virtual_memory().total)
+
+    # Discos
+    disks = []
+    for p in psutil.disk_partitions(all=False):
+        try:
+            u = psutil.disk_usage(p.mountpoint)
+            disks.append(f"{p.device} {fmt_bytes(u.total)}")
+        except Exception:
+            pass
+    info["disks"] = disks if disks else ["N/D"]
+
+    # GPU (via wmic)
+    info["gpu"] = "N/D"
+    try:
+        out = subprocess.check_output(
+            ["wmic", "path", "win32_VideoController", "get", "Name"],
+            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+            text=True, timeout=5,
+        )
+        lines = [l.strip() for l in out.strip().splitlines() if l.strip()]
+        if len(lines) >= 2:
+            info["gpu"] = " / ".join(lines[1:])
+    except Exception:
+        pass
+
+    return info
 
 
 _CPU_PRIMED = False

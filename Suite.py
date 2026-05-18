@@ -347,8 +347,48 @@ class SuiteApp:
             command=self._toggle_theme,
             kind="ghost", width=130).pack(side="right", padx=(0, 8))
 
+        # --- Panel de info del equipo ---
+        hw = system_info.hardware_summary()
+        hw_frame = tk.Frame(outer, bg=COLORS["bg_card"],
+                            highlightbackground=COLORS["border"],
+                            highlightthickness=1)
+        hw_frame.pack(fill="x", pady=(14, 4))
+
+        hw_inner = tk.Frame(hw_frame, bg=COLORS["bg_card"])
+        hw_inner.pack(fill="x", padx=14, pady=10)
+
+        tk.Label(hw_inner, text=f"\U0001F4BB  {hw['hostname']}",
+                 bg=COLORS["bg_card"], fg=COLORS["text"],
+                 font=FONTS["h2"]).grid(row=0, column=0, columnspan=4,
+                                        sticky="w", pady=(0, 6))
+
+        hw_items = [
+            ("\U0001F3F7  OS", hw["os"]),
+            ("\U00002699  CPU", hw["cpu"]),
+            ("\U0001F4BE  RAM", hw["ram"]),
+            ("\U0001F3A8  GPU", hw["gpu"]),
+        ]
+        for d in hw["disks"]:
+            hw_items.append(("\U0001F4BF  Disco", d))
+
+        for i, (lbl, val) in enumerate(hw_items):
+            r = 1 + i // 2
+            c = (i % 2) * 2
+            tk.Label(hw_inner, text=lbl, bg=COLORS["bg_card"],
+                     fg=COLORS["text_muted"], font=FONTS["small"],
+                     anchor="w").grid(row=r, column=c, sticky="w",
+                                      padx=(0, 6), pady=2)
+            tk.Label(hw_inner, text=val, bg=COLORS["bg_card"],
+                     fg=COLORS["text"], font=FONTS["body"],
+                     anchor="w").grid(row=r, column=c + 1, sticky="w",
+                                      padx=(0, 30), pady=2)
+
+        for c in range(4):
+            hw_inner.columnconfigure(c, weight=0 if c % 2 == 0 else 1)
+
+        # --- KPIs en vivo ---
         self.kpis = HeaderKPIs(outer)
-        self.kpis.pack(fill="x", pady=(18, 8))
+        self.kpis.pack(fill="x", pady=(8, 8))
 
         rb_stats = rollback.stats()
         if rb_stats["active_entries"] > 0:
